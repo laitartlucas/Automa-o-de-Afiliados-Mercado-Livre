@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ML Affiliate Bot</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d0d0d;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 60px;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; color: #fff; }
+    header h1 span { color: #25d366; }
+
+    .logout-btn {
+      background: none;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #666;
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .logout-btn:hover { color: #aaa; border-color: #444; }
+
+    /* ── Card ── */
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 28px;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #555;
+      margin-bottom: 20px;
+    }
+
+    /* ── Status bar ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: #111;
+      border: 1px solid #222;
+      font-size: 0.83rem;
+    }
+
+    .dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #555;
+      flex-shrink: 0;
+    }
+    .dot.connected { background: #25d366; box-shadow: 0 0 6px #25d36680; }
+    .dot.waiting   { background: #f59e0b; animation: pulse 1.4s infinite; }
+    .dot.error     { background: #ef4444; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    #status-text { color: #888; }
+
+    /* ── QR ── */
+    #qr-section {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    #qr-section h3 { font-size: 0.95rem; font-weight: 600; color: #ddd; }
+
+    .qr-wrap {
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+      width: 210px; height: 210px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #qr-img { width: 186px; height: 186px; display: block; }
+
+    .qr-steps {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 10px;
+      padding: 14px 18px;
+      text-align: left;
+      width: 100%;
+    }
+
+    .qr-steps span {
+      display: block;
+      font-size: 0.82rem;
+      color: #777;
+      line-height: 1.8;
+    }
+
+    .qr-steps span b { color: #aaa; font-weight: 600; }
+
+    .qr-loading {
+      display: flex; align-items: center; gap: 10px;
+      color: #555; font-size: 0.85rem; padding: 16px 0;
+    }
+
+    /* ── Settings ── */
+    .input-row { display: flex; gap: 10px; }
+
+    label { display: block; font-size: 0.83rem; color: #777; margin-bottom: 8px; font-weight: 500; }
+
+    input[type="text"] {
+      flex: 1;
+      background: #111;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus { border-color: #25d366; }
+    input[type="text"]::placeholder { color: #3a3a3a; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: #25d366;
+      color: #000;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #1ebe5a; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-outline {
+      background: none;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 12px 20px;
+      color: #888;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-outline:hover { border-color: #555; color: #ccc; }
+
+    .save-feedback {
+      display: none;
+      font-size: 0.8rem;
+      color: #25d366;
+      margin-top: 10px;
+    }
+
+    /* ── Send section ── */
+    #send-card { display: none; }
+
+    /* ── Loader ── */
+    .loader {
+      display: none; align-items: center; gap: 10px;
+      margin-top: 18px; color: #666; font-size: 0.85rem;
+    }
+
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid #2a2a2a;
+      border-top-color: #25d366;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result ── */
+    #result { display: none; margin-top: 20px; }
+
+    .result-label { font-size: 0.78rem; color: #555; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+
+    .result-box {
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 16px 18px;
+      font-size: 0.87rem;
+      line-height: 1.65;
+      color: #ccc;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .result-box.success { border-color: #25d36640; }
+    .result-box.error   { border-color: #ef444440; color: #f87171; }
+
+    .sent-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 9px 14px;
+      background: #25d36612;
+      border: 1px solid #25d36628;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      color: #25d366;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>ML <span>Affiliate</span> Bot</h1>
+  <button class="logout-btn" id="logout-btn">Sair</button>
+</header>
+
+<!-- WhatsApp card -->
+<div class="card">
+  <div class="card-title">WhatsApp</div>
+
+  <div class="status-bar">
+    <div class="dot waiting" id="dot"></div>
+    <span id="status-text">Conectando...</span>
+  </div>
+
+  <div id="qr-section">
+    <h3>Escaneie para conectar</h3>
+
+    <div class="qr-loading" id="qr-loading">
+      <div class="spinner"></div>
+      <span>Gerando QR Code...</span>
+    </div>
+
+    <div class="qr-wrap" id="qr-wrap" style="display:none">
+      <img id="qr-img" alt="QR Code" />
+    </div>
+
+    <div class="qr-steps">
+      <span><b>1.</b> Abra o WhatsApp no celular</span>
+      <span><b>2.</b> Três pontinhos → <b>Aparelhos conectados</b></span>
+      <span><b>3.</b> <b>Conectar aparelho</b> → escaneie o QR</span>
+    </div>
+    <small style="color:#444; font-size:0.78rem">QR atualiza automaticamente a cada 30s</small>
+  </div>
+</div>
+
+<!-- Settings card -->
+<div class="card">
+  <div class="card-title">Configurações</div>
+
+  <label for="group-input">Nome do grupo de destino</label>
+  <div class="input-row">
+    <input type="text" id="group-input" placeholder="Ex: Ofertas do Dia" />
+    <button class="btn-outline" id="save-btn">Salvar</button>
+  </div>
+  <div class="save-feedback" id="save-feedback">✓ Grupo salvo com sucesso</div>
+</div>
+
+<!-- Send card -->
+<div class="card" id="send-card">
+  <div class="card-title">Enviar Oferta</div>
+
+  <label for="url-input">Link de afiliado do Mercado Livre</label>
+  <div class="input-row">
+    <input type="text" id="url-input" placeholder="https://mercadolivre.com.br/..." autocomplete="off" />
+    <button class="btn-primary" id="send-btn">Enviar</button>
+  </div>
+
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <span id="step-label">Analisando produto...</span>
+  </div>
+
+  <div id="result">
+    <div class="result-label">Mensagem gerada</div>
+    <div class="result-box" id="result-box"></div>
+    <div class="sent-badge" id="sent-badge">✓ Enviado para o grupo</div>
+  </div>
+</div>
+
+<script>
+  // ── Elements ─────────────────────────────────────────────────────────────
+  const dot        = document.getElementById('dot');
+  const statusText = document.getElementById('status-text');
+  const qrSection  = document.getElementById('qr-section');
+  const qrLoading  = document.getElementById('qr-loading');
+  const qrWrap     = document.getElementById('qr-wrap');
+  const qrImg      = document.getElementById('qr-img');
+  const sendCard   = document.getElementById('send-card');
+  const groupInput = document.getElementById('group-input');
+  const saveBtn    = document.getElementById('save-btn');
+  const saveFb     = document.getElementById('save-feedback');
+  const urlInput   = document.getElementById('url-input');
+  const sendBtn    = document.getElementById('send-btn');
+  const loader     = document.getElementById('loader');
+  const stepLabel  = document.getElementById('step-label');
+  const resultDiv  = document.getElementById('result');
+  const resultBox  = document.getElementById('result-box');
+  const sentBadge  = document.getElementById('sent-badge');
+  const logoutBtn  = document.getElementById('logout-btn');
+
+  let connected = false;
+
+  // ── Status polling ────────────────────────────────────────────────────────
+  async function checkStatus() {
+    try {
+      const res = await fetch('/api/status');
+      if (res.status === 401) { window.location.href = '/login'; return; }
+      const { ready, hasQR, groupName } = await res.json();
+
+      // Populate group name if not yet typed
+      if (groupName && !groupInput.value) groupInput.value = groupName;
+
+      if (ready) {
+        setConnected();
+      } else if (hasQR) {
+        setWaitingQR();
+        loadQR();
+      } else {
+        setStarting();
+        setTimeout(checkStatus, 2500);
+      }
+    } catch {
+      dot.className = 'dot error';
+      statusText.textContent = 'Servidor offline';
+      setTimeout(checkStatus, 5000);
+    }
+  }
+
+  function setStarting() {
+    dot.className = 'dot waiting';
+    statusText.textContent = 'Iniciando WhatsApp...';
+    qrSection.style.display = 'none';
+  }
+
+  function setWaitingQR() {
+    dot.className = 'dot waiting';
+    statusText.textContent = 'Aguardando escanear o QR Code';
+    qrSection.style.display = 'flex';
+  }
+
+  function setConnected() {
+    if (connected) return;
+    connected = true;
+    dot.className = 'dot connected';
+    statusText.textContent = 'WhatsApp conectado';
+    qrSection.style.display = 'none';
+    sendCard.style.display = 'block';
+    urlInput.focus();
+  }
+
+  // ── QR polling ────────────────────────────────────────────────────────────
+  async function loadQR() {
+    try {
+      const res = await fetch('/api/qr');
+      const { qr } = await res.json();
+      if (qr) {
+        qrImg.src = qr;
+        qrLoading.style.display = 'none';
+        qrWrap.style.display = 'flex';
+      }
+    } catch {}
+    if (!connected) setTimeout(checkStatus, 3000);
+  }
+
+  setInterval(() => { if (!connected) loadQR(); }, 28000);
+
+  checkStatus();
+
+  // ── Save group name ───────────────────────────────────────────────────────
+  saveBtn.addEventListener('click', async () => {
+    const groupName = groupInput.value.trim();
+    if (!groupName) return;
+
+    saveBtn.disabled = true;
+    saveFb.style.display = 'none';
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        saveFb.style.display = 'block';
+        setTimeout(() => { saveFb.style.display = 'none'; }, 3000);
+      }
+    } catch {}
+
+    saveBtn.disabled = false;
+  });
+
+  groupInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveBtn.click(); });
+
+  // ── Send offer ────────────────────────────────────────────────────────────
+  sendBtn.addEventListener('click', async () => {
+    const url = urlInput.value.trim();
+    if (!url) return;
+
+    sendBtn.disabled = true;
+    loader.style.display = 'flex';
+    resultDiv.style.display = 'none';
+    sentBadge.style.display = 'none';
+
+    const steps = ['Analisando produto...', 'Gerando descrição com IA...', 'Enviando para o grupo...'];
+    let i = 0;
+    stepLabel.textContent = steps[0];
+    const interval = setInterval(() => { stepLabel.textContent = steps[Math.min(++i, steps.length - 1)]; }, 4000);
+
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+
+      clearInterval(interval);
+      loader.style.display = 'none';
+      resultDiv.style.display = 'block';
+
+      if (data.success) {
+        resultBox.className = 'result-box success';
+        resultBox.textContent = data.message;
+        sentBadge.style.display = 'flex';
+        urlInput.value = '';
+      } else {
+        resultBox.className = 'result-box error';
+        resultBox.textContent = data.error || 'Erro desconhecido';
+      }
+    } catch {
+      clearInterval(interval);
+      loader.style.display = 'none';
+      resultDiv.style.display = 'block';
+      resultBox.className = 'result-box error';
+      resultBox.textContent = 'Erro de conexão com o servidor.';
+    } finally {
+      sendBtn.disabled = false;
+    }
+  });
+
+  urlInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendBtn.click(); });
+
+  // ── Logout ────────────────────────────────────────────────────────────────
+  logoutBtn.addEventListener('click', async () => {
+    await fetch('/api/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
+</script>
+
+</body>
+</html>
