@@ -19,13 +19,15 @@ Produto: ${title || 'Produto Mercado Livre'}
 ${priceInfo}${featuresText}
 Link: ${url}
 
-Regras:
+Regras OBRIGATÓRIAS:
+- Responda APENAS com a mensagem final, sem título, sem cabeçalho, sem "Mensagem de Oferta", sem traços (---), sem dicas, sem comentários extras
 - Máximo 8 linhas
 - Use emojis estrategicamente (não exagere)
-- Destaque o preço e a economia (se houver desconto)
+- Destaque o preço no formato: Por: R$ XX,XX
 - Se tiver preço original use o formato ~~R$ XX,XX~~ para mostrar riscado
 - Termine com CTA urgente + link
-- Português brasileiro informal`;
+- Português brasileiro informal
+- NÃO adicione nada após o link`;
 
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
