@@ -4,19 +4,23 @@ const qrcode = require('qrcode-terminal');
 let client;
 let ready = false;
 let currentQR = null;
+let destChatId = null;
 
 function isReady() { return ready; }
 function getQR() { return currentQR; }
 
 async function resolveDestChat() {
-  const chats = await client.getChats();
-  const dest = chats.find((c) => c.isGroup && c.name === process.env.DEST_GROUP_NAME) || null;
-  if (dest) {
-    console.log(`[WA] Grupo destino: "${dest.name}"`);
-  } else {
-    console.warn(`[WA] Grupo "${process.env.DEST_GROUP_NAME}" não encontrado`);
+  if (!destChatId) {
+    const chats = await client.getChats();
+    const found = chats.find((c) => c.isGroup && c.name === process.env.DEST_GROUP_NAME);
+    if (!found) {
+      console.warn(`[WA] Grupo "${process.env.DEST_GROUP_NAME}" não encontrado`);
+      return null;
+    }
+    destChatId = found.id._serialized;
+    console.log(`[WA] Grupo destino: "${found.name}" (${destChatId})`);
   }
-  return dest;
+  return client.getChatById(destChatId);
 }
 
 async function sendToGroup(message, imageBuffer, imageUrl) {
@@ -73,7 +77,7 @@ async function initWhatsApp() {
 
   client.on('disconnected', (reason) => {
     ready = false;
-    destChat = null;
+    destChatId = null;
     console.warn('[WA] Desconectado:', reason);
   });
 
@@ -93,6 +97,7 @@ async function initWhatsApp() {
 
 function setGroupName(name) {
   process.env.DEST_GROUP_NAME = name;
+  destChatId = null;
 }
 
 module.exports = { initWhatsApp, sendToGroup, isReady, getQR, setGroupName };
