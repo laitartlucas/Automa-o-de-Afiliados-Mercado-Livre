@@ -25,6 +25,8 @@ async function sendToGroup(message, imageBuffer, imageUrl) {
   const dest = await resolveDestChat();
   if (!dest) throw new Error(`Grupo "${process.env.DEST_GROUP_NAME}" não encontrado`);
 
+  await new Promise((r) => setTimeout(r, 2000));
+
   if (imageBuffer && imageUrl) {
     const ext = (imageUrl.split('?')[0].split('.').pop() || 'jpg').toLowerCase();
     const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
@@ -49,7 +51,6 @@ async function initWhatsApp() {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-zygote',
-        '--single-process',
         '--disable-features=IsolateOrigins,site-per-process',
         '--disable-background-networking',
         '--disable-background-timer-throttling',
