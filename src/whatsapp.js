@@ -9,7 +9,7 @@ let destChatId = null;
 function isReady() { return ready; }
 function getQR() { return currentQR; }
 
-async function resolveDestChat() {
+async function resolveDestChatId() {
   if (!destChatId) {
     const chats = await client.getChats();
     const found = chats.find((c) => c.isGroup && c.name === process.env.DEST_GROUP_NAME);
@@ -20,22 +20,32 @@ async function resolveDestChat() {
     destChatId = found.id._serialized;
     console.log(`[WA] Grupo destino: "${found.name}" (${destChatId})`);
   }
-  return client.getChatById(destChatId);
+  return destChatId;
+}
+
+async function trySend(fn, retries = 3) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      console.warn(`[WA] Tentativa ${i}/${retries} falhou: ${err.message}`);
+      if (i === retries) throw err;
+      await new Promise((r) => setTimeout(r, i * 3000));
+    }
+  }
 }
 
 async function sendToGroup(message, imageBuffer, imageUrl) {
-  const dest = await resolveDestChat();
-  if (!dest) throw new Error(`Grupo "${process.env.DEST_GROUP_NAME}" não encontrado`);
-
-  await new Promise((r) => setTimeout(r, 2000));
+  const chatId = await resolveDestChatId();
+  if (!chatId) throw new Error(`Grupo "${process.env.DEST_GROUP_NAME}" não encontrado`);
 
   if (imageBuffer && imageUrl) {
     const ext = (imageUrl.split('?')[0].split('.').pop() || 'jpg').toLowerCase();
     const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
     const media = new MessageMedia(mime, imageBuffer.toString('base64'), `produto.${ext}`);
-    await dest.sendMessage(media, { caption: message });
+    await trySend(() => client.sendMessage(chatId, media, { caption: message }));
   } else {
-    await dest.sendMessage(message);
+    await trySend(() => client.sendMessage(chatId, message));
   }
 }
 
