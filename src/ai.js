@@ -6,8 +6,8 @@ async function generateSalesMessage(product) {
   const { title, currentPrice, originalPrice, discountPercent, features, url } = product;
 
   const priceInfo = currentPrice
-    ? `Preço: R$ ${currentPrice.toFixed(2)}${originalPrice ? ` (era R$ ${originalPrice.toFixed(2)})` : ''}${discountPercent ? ` — ${discountPercent}% OFF` : ''}`
-    : 'Preço: verificar no link';
+    ? `Por: R$ ${currentPrice.toFixed(2)}${originalPrice ? `\nDe: R$ ${originalPrice.toFixed(2)}` : ''}${discountPercent ? `\nDesconto: ${discountPercent}% OFF` : ''}`
+    : '';
 
   const featuresText = features?.length
     ? `\nCaracterísticas:\n${features.map((f) => `- ${f}`).join('\n')}`
@@ -23,9 +23,9 @@ Regras OBRIGATÓRIAS:
 - Responda APENAS com a mensagem final, sem título, sem cabeçalho, sem "Mensagem de Oferta", sem traços (---), sem dicas, sem comentários extras
 - Máximo 8 linhas
 - Use emojis estrategicamente (não exagere)
-- Destaque o preço no formato: Por: R$ XX,XX
-- Se tiver preço original use o formato ~~R$ XX,XX~~ para mostrar riscado
-- Termine com CTA urgente + link
+- SEMPRE inclua o preço na mensagem, exatamente no formato: Por: R$ XX,XX
+- Se tiver preço "De:", use o formato ~~R$ XX,XX~~ logo antes do "Por:" para mostrar riscado
+- Termine com CTA urgente + link (use o link exatamente como fornecido, sem alterar)
 - Português brasileiro informal
 - NÃO adicione nada após o link`;
 
