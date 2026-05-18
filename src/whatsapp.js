@@ -83,7 +83,6 @@ async function initWhatsApp() {
     client.on('ready', async () => {
       ready = true;
       console.log('[WA] Conectado e pronto!');
-      await resolveDestChat();
       resolve();
     });
 
