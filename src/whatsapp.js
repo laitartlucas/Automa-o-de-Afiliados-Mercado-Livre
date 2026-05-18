@@ -2,7 +2,6 @@ const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 
 let client;
-let destChat = null;
 let ready = false;
 let currentQR = null;
 
@@ -10,15 +9,14 @@ function isReady() { return ready; }
 function getQR() { return currentQR; }
 
 async function resolveDestChat() {
-  if (destChat) return destChat;
   const chats = await client.getChats();
-  destChat = chats.find((c) => c.isGroup && c.name === process.env.DEST_GROUP_NAME) || null;
-  if (destChat) {
-    console.log(`[WA] Grupo destino: "${destChat.name}"`);
+  const dest = chats.find((c) => c.isGroup && c.name === process.env.DEST_GROUP_NAME) || null;
+  if (dest) {
+    console.log(`[WA] Grupo destino: "${dest.name}"`);
   } else {
     console.warn(`[WA] Grupo "${process.env.DEST_GROUP_NAME}" não encontrado`);
   }
-  return destChat;
+  return dest;
 }
 
 async function sendToGroup(message, imageBuffer, imageUrl) {
@@ -43,7 +41,7 @@ async function initWhatsApp() {
     webVersionCache: { type: 'local', path: './.wwebjs_cache' },
     puppeteer: {
       headless: true,
-      protocolTimeout: 120000,
+      protocolTimeout: 300000,
       ...(process.env.PUPPETEER_EXECUTABLE_PATH && { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }),
       args: [
         '--no-sandbox',
@@ -95,7 +93,6 @@ async function initWhatsApp() {
 
 function setGroupName(name) {
   process.env.DEST_GROUP_NAME = name;
-  destChat = null; // força re-busca do grupo na próxima mensagem
 }
 
 module.exports = { initWhatsApp, sendToGroup, isReady, getQR, setGroupName };
