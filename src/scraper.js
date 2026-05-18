@@ -70,36 +70,47 @@ async function scrapeProduct(originalUrl) {
   let originalPrice = null;
   let discountPercent = null;
 
-  const jsonLd = extractJsonLd($);
-  if (jsonLd?.offers) {
-    const offers = Array.isArray(jsonLd.offers) ? jsonLd.offers[0] : jsonLd.offers;
-    const rawLow = offers?.lowPrice ? parseFloat(offers.lowPrice) : null;
-    const rawPrice = offers?.price ? parseFloat(offers.price) : null;
-    const rawHigh = offers?.highPrice ? parseFloat(offers.highPrice) : null;
-    // prefer lowPrice (discounted) over price (may be the original full price)
-    currentPrice = rawLow || rawPrice || null;
-    if (rawHigh && currentPrice && rawHigh > currentPrice) originalPrice = rawHigh;
-    else if (rawPrice && rawLow && rawPrice > rawLow) originalPrice = rawPrice;
+  // 1. Preço atual — aria-label="Agora: X reais..." (mais confiável)
+  const $agoraEl = $('[aria-label^="Agora:"]').first();
+  if ($agoraEl.length) {
+    const f = $agoraEl.find('.andes-money-amount__fraction').text().trim();
+    const c = $agoraEl.find('.andes-money-amount__cents').text().trim();
+    if (f) currentPrice = parsePrice(f + (c ? `,${c}` : ''));
   }
 
+  // 2. Fallback: classe --cents-superscript (elemento visual do preço atual)
   if (!currentPrice) {
-    // exclude prices inside <s> (strikethrough = original price) to avoid capturing the wrong value
-    const $priceLine = $('.ui-pdp-price__second-line,[data-testid="price-part"]').first();
-    let fraction = '';
-    let cents = '';
-    $priceLine.find('.andes-money-amount__fraction').each((_, el) => {
-      if (!$(el).closest('s').length && !fraction) fraction = $(el).text().trim();
-    });
-    $priceLine.find('.andes-money-amount__cents').each((_, el) => {
-      if (!$(el).closest('s').length && !cents) cents = $(el).text().trim();
-    });
-    if (fraction) currentPrice = parsePrice(fraction + (cents ? `,${cents}` : ''));
+    const $el = $('.andes-money-amount--cents-superscript').first();
+    const f = $el.find('.andes-money-amount__fraction').text().trim();
+    const c = $el.find('.andes-money-amount__cents').text().trim();
+    if (f) currentPrice = parsePrice(f + (c ? `,${c}` : ''));
   }
 
+  // 3. Fallback: JSON-LD (pode conter preço original em vez do atual)
+  if (!currentPrice) {
+    const jsonLd = extractJsonLd($);
+    if (jsonLd?.offers) {
+      const offers = Array.isArray(jsonLd.offers) ? jsonLd.offers[0] : jsonLd.offers;
+      const rawLow = offers?.lowPrice ? parseFloat(offers.lowPrice) : null;
+      const rawPrice = offers?.price ? parseFloat(offers.price) : null;
+      currentPrice = rawLow || rawPrice || null;
+    }
+  }
+
+  // Preço original — aria-label="Antes: X reais..." (dentro de <s>)
+  const $antesEl = $('[aria-label^="Antes:"]').first();
+  if ($antesEl.length) {
+    const f = $antesEl.find('.andes-money-amount__fraction').text().trim();
+    const c = $antesEl.find('.andes-money-amount__cents').text().trim();
+    if (f) originalPrice = parsePrice(f + (c ? `,${c}` : ''));
+  }
+
+  // Fallback preço original: classe --previous (elemento visual riscado)
   if (!originalPrice) {
-    const origFraction = $('s .andes-money-amount__fraction,.ui-pdp-price__original-value .andes-money-amount__fraction').first().text().trim();
-    const origCents = $('s .andes-money-amount__cents,.ui-pdp-price__original-value .andes-money-amount__cents').first().text().trim();
-    if (origFraction) originalPrice = parsePrice(origFraction + (origCents ? `,${origCents}` : ''));
+    const $el = $('.andes-money-amount--previous').first();
+    const f = $el.find('.andes-money-amount__fraction').text().trim();
+    const c = $el.find('.andes-money-amount__cents').text().trim();
+    if (f) originalPrice = parsePrice(f + (c ? `,${c}` : ''));
   }
 
   const discountLabel = $('.ui-pdp-price__second-line__label,[data-testid="discount"],[class*="discount-label"]').first().text().trim();
