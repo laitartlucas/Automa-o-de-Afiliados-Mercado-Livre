@@ -73,20 +73,33 @@ async function scrapeProduct(originalUrl) {
   const jsonLd = extractJsonLd($);
   if (jsonLd?.offers) {
     const offers = Array.isArray(jsonLd.offers) ? jsonLd.offers[0] : jsonLd.offers;
-    currentPrice = offers?.price ? parseFloat(offers.price) : null;
-    if (offers?.highPrice && parseFloat(offers.highPrice) > currentPrice)
-      originalPrice = parseFloat(offers.highPrice);
+    const rawLow = offers?.lowPrice ? parseFloat(offers.lowPrice) : null;
+    const rawPrice = offers?.price ? parseFloat(offers.price) : null;
+    const rawHigh = offers?.highPrice ? parseFloat(offers.highPrice) : null;
+    // prefer lowPrice (discounted) over price (may be the original full price)
+    currentPrice = rawLow || rawPrice || null;
+    if (rawHigh && currentPrice && rawHigh > currentPrice) originalPrice = rawHigh;
+    else if (rawPrice && rawLow && rawPrice > rawLow) originalPrice = rawPrice;
   }
 
   if (!currentPrice) {
-    const fraction = $('.ui-pdp-price__second-line .andes-money-amount__fraction,[data-testid="price-part"] .andes-money-amount__fraction').first().text().trim();
-    const cents = $('.ui-pdp-price__second-line .andes-money-amount__cents,[data-testid="price-part"] .andes-money-amount__cents').first().text().trim();
+    // exclude prices inside <s> (strikethrough = original price) to avoid capturing the wrong value
+    const $priceLine = $('.ui-pdp-price__second-line,[data-testid="price-part"]').first();
+    let fraction = '';
+    let cents = '';
+    $priceLine.find('.andes-money-amount__fraction').each((_, el) => {
+      if (!$(el).closest('s').length && !fraction) fraction = $(el).text().trim();
+    });
+    $priceLine.find('.andes-money-amount__cents').each((_, el) => {
+      if (!$(el).closest('s').length && !cents) cents = $(el).text().trim();
+    });
     if (fraction) currentPrice = parsePrice(fraction + (cents ? `,${cents}` : ''));
   }
 
   if (!originalPrice) {
     const origFraction = $('s .andes-money-amount__fraction,.ui-pdp-price__original-value .andes-money-amount__fraction').first().text().trim();
-    if (origFraction) originalPrice = parsePrice(origFraction);
+    const origCents = $('s .andes-money-amount__cents,.ui-pdp-price__original-value .andes-money-amount__cents').first().text().trim();
+    if (origFraction) originalPrice = parsePrice(origFraction + (origCents ? `,${origCents}` : ''));
   }
 
   const discountLabel = $('.ui-pdp-price__second-line__label,[data-testid="discount"],[class*="discount-label"]').first().text().trim();
@@ -96,6 +109,8 @@ async function scrapeProduct(originalUrl) {
   } else if (originalPrice && currentPrice && originalPrice > currentPrice) {
     discountPercent = Math.round((1 - currentPrice / originalPrice) * 100);
   }
+
+  console.log(`[SCRAPER] Preço atual: ${currentPrice} | Preço original: ${originalPrice} | Desconto: ${discountPercent}%`);
 
   const features = [];
   $('.ui-pdp-features__item').each((_, el) => {
