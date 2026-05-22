@@ -2,7 +2,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 
 const anthropic = new Anthropic();
 
-async function generateSalesMessage(product) {
+async function generateSalesMessage(product, coupon = null) {
   const { title, currentPrice, originalPrice, discountPercent, features, url } = product;
 
   const priceInfo = currentPrice
@@ -35,7 +35,8 @@ Regras OBRIGATÓRIAS:
     messages: [{ role: 'user', content: prompt }],
   });
 
-  return response.content[0].text.trim();
+  const message = response.content[0].text.trim();
+  return coupon ? `${message}\n\nCUPOM: ${coupon}` : message;
 }
 
 module.exports = { generateSalesMessage };

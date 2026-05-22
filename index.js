@@ -94,7 +94,7 @@ app.post('/api/settings', requireAuth, (req, res) => {
 });
 
 app.post('/api/process', requireAuth, async (req, res) => {
-  const { url } = req.body;
+  const { url, coupon } = req.body;
   if (!url?.trim()) return res.status(400).json({ error: 'URL é obrigatória' });
   if (!isReady()) return res.status(503).json({ error: 'WhatsApp não está conectado ainda.' });
   if (!getSetting('DEST_GROUP_NAME')) return res.status(400).json({ error: 'Configure o nome do grupo antes de enviar.' });
@@ -104,7 +104,7 @@ app.post('/api/process', requireAuth, async (req, res) => {
     const product = await scrapeProduct(url.trim());
     console.log(`[PIPELINE] Produto: "${product.title}"`);
 
-    const message = await generateSalesMessage(product);
+    const message = await generateSalesMessage(product, coupon?.trim().toUpperCase() || null);
     console.log('[PIPELINE] Mensagem gerada');
 
     let imageBuffer = null;

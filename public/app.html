@@ -306,6 +306,9 @@
     <button class="btn-primary" id="send-btn">Enviar</button>
   </div>
 
+  <label for="coupon-input" style="margin-top:14px">Cupom <span style="color:#444;font-weight:400">(opcional)</span></label>
+  <input type="text" id="coupon-input" placeholder="Ex: MELIMODAS" autocomplete="off" style="text-transform:uppercase" />
+
   <div class="loader" id="loader">
     <div class="spinner"></div>
     <span id="step-label">Analisando produto...</span>
@@ -330,8 +333,9 @@
   const groupInput = document.getElementById('group-input');
   const saveBtn    = document.getElementById('save-btn');
   const saveFb     = document.getElementById('save-feedback');
-  const urlInput   = document.getElementById('url-input');
-  const sendBtn    = document.getElementById('send-btn');
+  const urlInput    = document.getElementById('url-input');
+  const couponInput = document.getElementById('coupon-input');
+  const sendBtn     = document.getElementById('send-btn');
   const loader     = document.getElementById('loader');
   const stepLabel  = document.getElementById('step-label');
   const resultDiv  = document.getElementById('result');
@@ -452,7 +456,7 @@
       const res = await fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, coupon: couponInput.value.trim().toUpperCase() || null }),
       });
       const data = await res.json();
 
@@ -465,6 +469,7 @@
         resultBox.textContent = data.message;
         sentBadge.style.display = 'flex';
         urlInput.value = '';
+        couponInput.value = '';
       } else {
         resultBox.className = 'result-box error';
         resultBox.textContent = data.error || 'Erro desconhecido';
